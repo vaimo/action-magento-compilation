@@ -1,0 +1,37 @@
+name: 'Magento Compilation'
+description: 'This action is used to compile Magento'
+author: Patryk Waluś <patryk.walus@vaimo.com>
+inputs:
+  composer-auth:
+    description: 'Content of auth.json file.'
+    required: true
+  working-directory:
+    description: 'Set working directory for your action.'
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Git checkout
+      uses: vaimo/action-git-checkout@v1
+      with:
+        working-directory: ${{inputs.working-directory}}
+
+    - name: Validate composer.json and composer.lock
+      shell: bash
+      run: composer validate
+
+    - name: Cache Composer packages
+      uses: actions/cache@v4
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+
+    - name: Install dependencies
+      shell: bash
+      run: COMPOSER_AUTH=${{inputs.composer-auth}} composer install --no-interaction
+
+    - name: Compile Magento
+      shell: bash
+      run: bin/magento setup:di:compile --no-interaction
